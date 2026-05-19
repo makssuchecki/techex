@@ -4,7 +4,18 @@ const pool = require("./db");
 const app = express();
 app.use(express.json());
 
-
+async function waitForDB() {
+  while (true) {
+    try {
+      await pool.query("SELECT 1");
+      console.log("DB connected");
+      break;
+    } catch (err) {
+      console.log("Waiting for DB...");
+      await new Promise(res => setTimeout(res, 2000));
+    }
+  }
+}
 app.get("/health", async (req, res) => {
   try {
     await pool.query("SELECT 1");
@@ -31,12 +42,19 @@ async function initDB() {
 }
 
 app.get("/tasks", async (req, res) => {
-  const result = await pool.query("SELECT * FROM tasks");
-  res.json(result.rows);
+  try {
+    const result = await pool.query("SELECT * FROM tasks");
+    res.json(result.rows);
+  } catch (err) {
+    res.status(503).json({ error: "database unavailable" });
+  }
 });
 
-
 app.post("/tasks", async (req, res) => {
+  if (!req.body || !req.body.title) {
+    return res.status(400).json({ error: "title is required" });
+  }
+
   const { title } = req.body;
 
   const result = await pool.query(
@@ -72,6 +90,7 @@ app.delete("/tasks/:id", async (req, res) => {
 const PORT = 3000;
 
 app.listen(PORT, async () => {
-  console.log("Server started on port", PORT);
+  await waitForDB();
   await initDB();
+  console.log("Server started on port", PORT);
 });

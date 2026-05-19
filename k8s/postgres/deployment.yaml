@@ -11,7 +11,7 @@ spec:
     metadata:
       labels:
         app: postgres
-    spec:
+    spec: 
       containers:
         - name: postgres
           image: postgres:15
@@ -22,3 +22,11 @@ spec:
                 name: postgres-config
             - secretRef:
                 name: postgres-secret
+          volumeMounts:
+            - mountPath: /var/lib/postgresql/data
+              name: postgres-storage
+
+      volumes:
+        - name: postgres-storage
+          persistentVolumeClaim:
+            claimName: postgres-pvc
