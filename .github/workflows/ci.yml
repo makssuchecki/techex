@@ -51,6 +51,8 @@ jobs:
           kubectl set image deployment/backend-green \
             backend=ghcr.io/${{ github.repository }}/backend:${{ github.sha }}
 
+          kubectl patch service backend \
+            -p '{"spec":{"selector":{"app":"backend","version":"green"}}}'
       - name: Poczekaj na deploymenty
         run: |
           kubectl rollout status deployment/postgres --timeout=180s
@@ -61,13 +63,6 @@ jobs:
           kubectl get deployments
           kubectl get pods -o wide
           kubectl get svc
-
-      - name: Poczekaj na Ready
-        run: |
-          kubectl wait \
-            --for=condition=Ready pod \
-            -l app=backend \
-            --timeout=180s
 
       - name: Test HTTP
         run: |
