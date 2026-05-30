@@ -1,8 +1,10 @@
 const express = require("express");
 const pool = require("./db");
+const cors = require("cors");
 
 const app = express();
 app.use(express.json());
+app.use(cors());
 
 async function waitForDB() {
   while (true) {
@@ -22,11 +24,13 @@ app.get("/health", async (req, res) => {
     res.status(200).json({
       status: "ok",
       database: "connected",
+      version: "2.0.0"
     });
   } catch (err) {
     res.status(503).json({
       status: "error",
       database: "disconnected",
+      version: "2.0.0"
     });
   }
 });
@@ -36,7 +40,8 @@ async function initDB() {
     CREATE TABLE IF NOT EXISTS tasks (
       id SERIAL PRIMARY KEY,
       title TEXT NOT NULL,
-      completed BOOLEAN DEFAULT false
+      completed BOOLEAN DEFAULT false,
+      priority TEXT DEFAULT 'medium'
     )
   `);
 }
@@ -55,11 +60,11 @@ app.post("/tasks", async (req, res) => {
     return res.status(400).json({ error: "title is required" });
   }
 
-  const { title } = req.body;
+  const { title, priority = "medium" } = req.body;
 
   const result = await pool.query(
-    "INSERT INTO tasks (title) VALUES ($1) RETURNING *",
-    [title]
+    "INSERT INTO tasks (title, priority) VALUES ($1, $2) RETURNING *",
+    [title, priority]
   );
 
   res.status(201).json(result.rows[0]);
